@@ -110,6 +110,8 @@ class Cuboid extends Geometry {
     constructor(name, length, position) {
         super(name);
 
+        this.length = length;
+
         let s2 = length / 2.0;
 
         this.min = [-s2, -s2, -s2];

@@ -25,6 +25,7 @@ var cancelAnimationFrame =
 // Callbacks
 var firstClick = true;
 var leftButtonPressed = false;
+var rightButtonPressed = false;
 var readPixels = false;
 
 var lastX = 0;
@@ -34,6 +35,10 @@ var pixelX = -1;
 var pixelY = -1;
 
 var currentSelectedObject = -1;
+
+var firstIntersectionPoint = false;
+
+var lastIntersectionPoint = vec3.create();
 
 function mouseMove(event) {
     if (leftButtonPressed) {
@@ -48,8 +53,30 @@ function mouseMove(event) {
         let deltaX = lastX - event.clientX;
         let deltaY = lastY - event.clientY;
 
-        if (currentSelectedObject != -1) {
+        if (currentSelectedObject == -1) {
             cam.Update(deltaX, deltaY);
+        } else {
+            pixelX = event.clientX - 8;
+            pixelY = canvas.height - event.clientY + 8;
+
+
+            const intersectionPoint = findIntersectionPoint(pixelX, pixelY, vec3.fromValues(0.0, -0.5, 0.0), vec3.fromValues(0.0, 1.0, 0.0));
+            if (firstIntersectionPoint) {
+                lastIntersectionPoint = intersectionPoint;
+                firstIntersectionPoint = false;
+            }
+
+            const positionOffset = vec3.create();
+            vec3.subtract(positionOffset, lastIntersectionPoint, intersectionPoint);
+            positionOffset[0] = -positionOffset[0];
+            positionOffset[2] = -positionOffset[2];
+
+            lastIntersectionPoint = intersectionPoint;
+
+            scene.UpdatePosition(currentSelectedObject, positionOffset);
+
+            console.log(intersectionPoint);
+            console.log(positionOffset);
         }
         
         lastX = event.clientX;
@@ -79,19 +106,32 @@ function resize() {
 }
 
 function mouseUp(event) {
-    if (event.button == 0)
-    {
+    if (event.button == 0) {
         leftButtonPressed = false;
-        firstClick = true;
-        readPixels = true;
-        pixelX = event.clientX - 8;
-        pixelY = canvas.height - event.clientY + 8;
+
+        if (firstIntersectionPoint)
+            firstIntersectionPoint = false;
+    }
+    if (event.button == 2) {
+        rightButtonPressed = false;
     }
 }
 
 function mouseDown(event) {
     if (event.button == 0) {
         leftButtonPressed = true;
+        readPixels = true;
+
+        firstClick = true;
+        firstIntersectionPoint = true;
+        pixelX = event.clientX - 8;
+        pixelY = canvas.height - event.clientY + 8;
+
+        //Identify selected object
+        getObjID(pixelX, pixelY);
+    }
+    if (event.button == 2) {
+        rightButtonPressed = true;
     }
 }
 
@@ -422,6 +462,71 @@ var colorAttachment0_color = [0.75, 0.75, 0.75, 1.0];
 var colorAttachment1_color = [-1, 0, 0, 0];
 var depthAttachment_color = [1.0];
 
+function getObjID(mouseX, mouseY) {
+    readPixels = false;
+
+     gl.bindFramebuffer(gl.FRAMEBUFFER, dummyFBO);
+
+        var data = new Uint8Array(4);
+        
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorAttachemnt_ObjIds, 0);
+        gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+        if (data[0] > 0 && data[0] < 50)
+            currentSelectedObject = data[0];
+        else
+            currentSelectedObject = -1;
+        console.log(currentSelectedObject);
+}
+
+function findIntersectionPoint(mouseX, mouseY, planePoint, planeNormal) {
+    console.log(mouseX, ", ", mouseY);
+
+    const ndcX = 2.0 * mouseX / canvas.width - 1.0;
+    const ndcY = 2.0 * mouseY / canvas.height - 1.0;
+
+    const nearPoint = vec3.fromValues(ndcX, ndcY, 0.0);
+    const farPoint = vec3.fromValues(ndcX, ndcY, 1.0);
+
+    const viewMat = cam.GetView();
+    const projMat = cam.GetProjection();
+
+    const invViewProj = mat4.create();
+    mat4.multiply(invViewProj, projMat, viewMat);
+    mat4.invert(invViewProj, invViewProj);
+
+    const rayOrigin = vec3.create();
+    const rayFar = vec3.create();
+    vec3.transformMat4(rayOrigin, nearPoint, invViewProj);
+    vec3.transformMat4(rayFar, farPoint, invViewProj);
+
+    const rayDirection = vec3.create();
+    vec3.subtract(rayDirection, rayFar, rayOrigin);
+    vec3.normalize(rayDirection, rayDirection);
+
+    // get intersection point
+    let intersectionPoint = vec3.fromValues(0.0, 0.0, 0.0);
+    const denom = vec3.dot(rayDirection, planeNormal);
+
+    if (Math.abs(denom) > 0.0001) {
+        const originToPlanePoint = vec3.create();
+        vec3.subtract(originToPlanePoint, planePoint, rayOrigin);
+
+        const t = vec3.dot(originToPlanePoint, planeNormal) / denom;
+
+        if (t >= 0) {
+            vec3.scaleAndAdd(intersectionPoint, rayOrigin, rayDirection, t);
+
+            // if (intersectionPoint[0] < scene.ground.min[0] || intersectionPoint[0] > scene.ground.max[0] ||
+            //     intersectionPoint[2] < scene.ground.min[2] || intersectionPoint[2] > scene.ground.max[2]) {
+            //         intersectionPoint = vec3.fromValues(0.0, 0.0, 0.0);
+            //     }
+        }
+    }
+
+    return (intersectionPoint);
+}
+
 function draw() {
     // Pass 1
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -472,69 +577,6 @@ function draw() {
     gl.useProgram(null);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    if (readPixels) {
-        //Identify selected object
-        readPixels = false;
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, dummyFBO);
-
-        var data = new Uint8Array(4);
-        
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorAttachemnt_ObjIds, 0);
-        gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
-
-        if (data[0] > 0 && data[0] < 50)
-            currentSelectedObject = data[0];
-        else
-            currentSelectedObject = -1;
-        console.log(currentSelectedObject);
-
-        // Ray Cast
-        var ndcX = 2.0 * pixelX / canvas.width - 1.0;
-        var ndcY = 2.0 * pixelY / canvas.height - 1.0;
-
-        const nearPoint = vec3.fromValues(ndcX, ndcY, 0);
-        const fraPoint = vec3.fromValues(ndcX, ndcY, 1);
-
-        const invViewProj = mat4.create();
-        mat4.multiply(invViewProj, projMat, viewMat);
-        mat4.invert(invViewProj, invViewProj);
-
-        const rayOrigin = vec3.create();
-        const rayFar = vec3.create();
-        vec3.transformMat4(rayOrigin, nearPoint, invViewProj);
-        vec3.transformMat4(rayFar, fraPoint, invViewProj);
-
-        const rayDirection = vec3.create();
-        vec3.subtract(rayDirection, rayFar, rayOrigin);
-        vec3.normalize(rayDirection, rayDirection);
-
-        const planePoint = vec3.fromValues(0, -0.5, 0);
-        const planeNormal = vec3.fromValues(0, 1, 0);
-
-        // get intersection point
-        let intersectionPoint = vec3.fromValues(0, 0, 0);
-        const denom = vec3.dot(rayDirection, planeNormal);
-
-        if (Math.abs(denom) > 0.0001) {
-            const originToP = vec3.create();
-            vec3.subtract(originToP, planePoint, rayOrigin);
-
-            const t = vec3.dot(originToP, planeNormal) / denom;
-
-            if (t >= 0) {
-                vec3.scaleAndAdd(intersectionPoint, rayOrigin, rayDirection, t);
-
-                if (intersectionPoint[0] < scene.ground.min[0] || intersectionPoint[0] > scene.ground.max[0] ||
-                    intersectionPoint[2] < scene.ground.min[2] || intersectionPoint[2] > scene.ground.max[2]) {
-                        intersectionPoint = vec3.fromValues(0, 0, 0);
-                    }
-            }
-        }
-
-        console.log(intersectionPoint);
-    }
 
     // Pass 2
     gl.clear(gl.COLOR_BUFFER_BIT);
