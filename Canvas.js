@@ -446,12 +446,10 @@ function createOverlayRenderPassResources() {
         + "uniform vec4 u_color;\n"
         + "\n"
         + "layout (location = 0) out vec4 fragColor;\n"
-        + "layout (location = 1) out vec4 objID;\n"
         + "\n"
         + "void main(void)\n"
         + "{\n"
         + " fragColor = u_color;\n"
-        + " objID = vec4(51, 0, 0, 1);\n"
         + "}\n";
     var overlay_vso = compileShader(gl.VERTEX_SHADER, vertexShader);
     var overlay_pso = compileShader(gl.FRAGMENT_SHADER, pixelShader);
@@ -646,6 +644,8 @@ function draw() {
     gl.useProgram(null);
 
     // Render overlay
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, null, 0);
+
     gl.useProgram(overlayRenderProgram);
 
     gl.uniformMatrix4fv(uniform_overlay_p_matrix, false, projMat);
@@ -672,15 +672,15 @@ function draw() {
     ]);
 
     // NavMesh
-    // gl.enable(gl.BLEND);
-    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    // gl.uniform4fv(uniform_overlay_color, navmeshColor);
-    // gl.bindVertexArray(this.vao_navmesh);
-    // gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo_navmesh_vertices);
-    // gl.bufferSubData(gl.ARRAY_BUFFER, 0, navVertices);
-    // gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
-    // gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    // gl.bindVertexArray(null);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform4fv(uniform_overlay_color, navmeshColor);
+    gl.bindVertexArray(this.vao_navmesh);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo_navmesh_vertices);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, navVertices);
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
 
     gl.disable(gl.BLEND);
 
