@@ -33,6 +33,8 @@ var lastY = 0;
 var pixelX = -1;
 var pixelY = -1;
 
+var currentSelectedObject = -1;
+
 function mouseMove(event) {
     if (leftButtonPressed) {
         
@@ -46,7 +48,9 @@ function mouseMove(event) {
         let deltaX = lastX - event.clientX;
         let deltaY = lastY - event.clientY;
 
-        cam.Update(deltaX, deltaY);
+        if (currentSelectedObject != -1) {
+            cam.Update(deltaX, deltaY);
+        }
         
         lastX = event.clientX;
         lastY = event.clientY;
@@ -446,7 +450,7 @@ function draw() {
     
     var modelMat = scene.ground.GetTransformMatrix();
     gl.uniform3fv(uniform_obj_color, groundColor);
-    gl.uniform1i(uniform_obj_id, 33);
+    gl.uniform1i(uniform_obj_id, 50);
     gl.uniformMatrix4fv(uniform_model, false, modelMat);
     scene.ground.Render();
 
@@ -461,7 +465,7 @@ function draw() {
 
     modelMat = scene.agent.GetTransformMatrix();
     gl.uniform3fv(uniform_obj_color, agentColor);
-    gl.uniform1i(uniform_obj_id, 34);
+    gl.uniform1i(uniform_obj_id, 49);
     gl.uniformMatrix4fv(uniform_model, false, modelMat);
     scene.agent.Render();
 
@@ -470,6 +474,7 @@ function draw() {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     if (readPixels) {
+        //Identify selected object
         readPixels = false;
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, dummyFBO);
@@ -479,37 +484,56 @@ function draw() {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorAttachemnt_ObjIds, 0);
         gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
-        // console.log(data);
-
-        // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorAttachment_Position, 0);
-        // gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
-        
-        // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (data[0] > 0 && data[0] < 50)
+            currentSelectedObject = data[0];
+        else
+            currentSelectedObject = -1;
+        console.log(currentSelectedObject);
 
         // Ray Cast
-        // Convert mouse position to NDC
-        var ndcX = pixelX / canvas.width * 2.0 - 1.0;
-        var ndcY = pixelY / canvas.height * 2.0 - 1.0;
+        var ndcX = 2.0 * pixelX / canvas.width - 1.0;
+        var ndcY = 2.0 * pixelY / canvas.height - 1.0;
 
-        console.log(ndcX, " ", ndcY);
+        const nearPoint = vec3.fromValues(ndcX, ndcY, 0);
+        const fraPoint = vec3.fromValues(ndcX, ndcY, 1);
 
-        var invProjView = mat4.create;
-        mat4.multiply(invProjView, viewMat, projMat)
-        mat4.invert(invProjView, invProjView);
+        const invViewProj = mat4.create();
+        mat4.multiply(invViewProj, projMat, viewMat);
+        mat4.invert(invViewProj, invViewProj);
 
-        let ndcNear = vec4.fromValues(ndcX, ndcY, -1.0, 1.0);
-        let worldNear = vec4.create();
+        const rayOrigin = vec3.create();
+        const rayFar = vec3.create();
+        vec3.transformMat4(rayOrigin, nearPoint, invViewProj);
+        vec3.transformMat4(rayFar, fraPoint, invViewProj);
 
-        vec4.transformMat4(worldNear, ndcNear, invProjView);
+        const rayDirection = vec3.create();
+        vec3.subtract(rayDirection, rayFar, rayOrigin);
+        vec3.normalize(rayDirection, rayDirection);
 
-        worldNear[0] = worldNear[0] / worldNear[3];
-        worldNear[1] = worldNear[1] / worldNear[3];
-        worldNear[2] = worldNear[2] / worldNear[3];
-        worldNear[3] = worldNear[3] / worldNear[3];
+        const planePoint = vec3.fromValues(0, -0.5, 0);
+        const planeNormal = vec3.fromValues(0, 1, 0);
 
-        console.log(ndcNear);
-        console.log(worldNear);
+        // get intersection point
+        let intersectionPoint = vec3.fromValues(0, 0, 0);
+        const denom = vec3.dot(rayDirection, planeNormal);
 
+        if (Math.abs(denom) > 0.0001) {
+            const originToP = vec3.create();
+            vec3.subtract(originToP, planePoint, rayOrigin);
+
+            const t = vec3.dot(originToP, planeNormal) / denom;
+
+            if (t >= 0) {
+                vec3.scaleAndAdd(intersectionPoint, rayOrigin, rayDirection, t);
+
+                if (intersectionPoint[0] < scene.ground.min[0] || intersectionPoint[0] > scene.ground.max[0] ||
+                    intersectionPoint[2] < scene.ground.min[2] || intersectionPoint[2] > scene.ground.max[2]) {
+                        intersectionPoint = vec3.fromValues(0, 0, 0);
+                    }
+            }
+        }
+
+        console.log(intersectionPoint);
     }
 
     // Pass 2
