@@ -7,6 +7,8 @@ class Scene {
         this.ground = null;
         this.cubes = [];
         this.agent = null;
+
+        this.finalPosition = vec3.fromValues(0.0, -0.49999, 0.0);
     };
 
     checkBound(value, min, max, offset) {
@@ -15,11 +17,30 @@ class Scene {
         return false;
     }
 
+    UpdateFinalPosition(newPosition) {
+        if (this.checkBound(newPosition[0], this.ground.min[0], this.ground.max[0], this.agent.diameter / 2.0))
+            this.finalPosition[0] = newPosition[0];
+        if (this.checkBound(newPosition[1], this.ground.min[2], this.ground.max[2], this.agent.diameter / 2.0))
+            this.finalPosition[2] = newPosition[2];
+        this.finalPosition[1] = -0.499999;
+    }
+
+    AddToFinalPosition(positionOffset) {
+        let newX = this.finalPosition[0] + positionOffset[0];
+        let newZ = this.finalPosition[2] + positionOffset[2];
+
+        if (this.checkBound(newX, this.ground.min[0], this.ground.max[0], this.agent.diameter / 2.0))
+            this.finalPosition[0] = newX;
+        if (this.checkBound(newZ, this.ground.min[2], this.ground.max[2], this.agent.diameter / 2.0))
+            this.finalPosition[2] = newZ;
+        this.finalPosition[1] = -0.499999;
+    }
+
     UpdatePosition(objID, positionOffset) {
         if (objID == this.agentObjID) {
 
-            let newX = scene.agent.position[0] + positionOffset[0];
-            let newZ = scene.agent.position[2] + positionOffset[2];
+            let newX = this.agent.position[0] + positionOffset[0];
+            let newZ = this.agent.position[2] + positionOffset[2];
 
             if (this.checkBound(newX, this.ground.min[0], this.ground.max[0], this.agent.diameter / 2.0))
                 this.agent.position[0] = newX;
