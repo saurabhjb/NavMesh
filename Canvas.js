@@ -472,14 +472,12 @@ function createOverlayRenderPassResources() {
     // Point 
     vao_point = gl.createVertexArray();
     gl.bindVertexArray(vao_point);
-
     vbo_pointVertex = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo_pointVertex);
     gl.bufferData(gl.ARRAY_BUFFER, 12, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(SHADER_ATTRIBUTES.POSITION, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
     gl.bindVertexArray(null);
 
     generateNavMeshResources();
@@ -500,17 +498,12 @@ function init() {
     const ext = gl.getExtension("WEBGL_polygon_mode");
     ext.polygonModeWEBGL(gl.FRONT_AND_BACK, ext.FILL_WEBGL);
 
-    const ext2 = gl.getExtension("EXT_color_buffer_float");
-    if (!ext2) {
-        console.log("Extension not supported.");
-    }
-
     scene = new Scene();
     // Ground setup
     scene.ground = new Quad("ground", 10.0, 10.0, 11, 11);
     scene.ground.UpdatePosition(0.0, -0.5, 0.0);
     // Cube setup
-    scene.cubes.push(new Cuboid("Obs1", 1.0, [-4.5, 0.0, -4.5]));
+    scene.cubes.push(new Cuboid("Obs1", 1.0, [-4.0, 0.0, -4.0]));
     scene.cubes.push(new Cuboid("Obs2", 1.0, [1.5, 0.0, 1.5]));
     scene.cubes.push(new Cuboid("Obs3", 1.0, [2.5, 0.0, 2.5]));
     scene.cubes.push(new Cuboid("Obs4", 1.0, [3.5, 0.0, 3.5]));
@@ -587,7 +580,6 @@ function findIntersectionPoint(mouseX, mouseY, planePoint, planeNormal) {
     return (intersectionPoint);
 }
 
-var once = true;
 var numPolygons = 0;
 
 function generateNavMeshResources() {
@@ -602,7 +594,7 @@ function generateNavMeshResources() {
     gl.bindVertexArray(vao_navmesh);
 
     var navVertices = navMeshObj.GetPolygonsData();
-    numPolygons = navVertices / (4 * 3);
+    numPolygons = navVertices.length / (4 * 3);
 
     vbo_navmesh_vertices = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo_navmesh_vertices);
@@ -685,15 +677,6 @@ function draw() {
     gl.drawArrays(gl.POINTS, 0, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindVertexArray(null);
-
-    if (once) {
-        navVertices = navMeshObj.GetPolygonsData();
-        numPolygons = navVertices.length / (4 * 3);
-
-        console.log(numPolygons);
-
-        once = false;
-    }
 
     // NavMesh
     gl.enable(gl.BLEND);

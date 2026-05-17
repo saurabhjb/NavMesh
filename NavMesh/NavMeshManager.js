@@ -31,22 +31,22 @@ class NavMeshManager {
             let max = [position[0] + l2, position[2] + l2];
 
             // get grid number
-            let minGridX = Math.floor(Math.floor(min[0] + this.groundWidth / 2.0) / this.cellSize);
-            let minGridZ = Math.floor(Math.floor(min[1] + this.groundHeight / 2.0) / this.cellSize);
+            let minX = min[0] + this.groundWidth / 2.0;
+            let minZ = min[1] + this.groundHeight / 2.0;
+            let maxX = max[0] + this.groundWidth / 2.0;
+            let maxZ = max[1] + this.groundHeight / 2.0;
 
-            let maxGridX = Math.ceil(Math.ceil(max[0] + this.groundWidth / 2.0) / this.cellSize);
-            let maxGridZ = Math.ceil(Math.ceil(max[1] + this.groundHeight / 2.0) / this.cellSize);
-            
-            console.log(min, max);
-            console.log(minGridX, minGridZ, maxGridX, maxGridZ);
+            let gridMinX = Math.floor(minX / cellSize);
+            let gridMinZ = Math.floor(minZ / cellSize);
+            let gridMaxX = Math.ceil(maxX / cellSize);
+            let gridMaxZ = Math.ceil(maxZ / cellSize);
 
-            for (let h = minGridZ; h < maxGridZ; h++) {
-                for (let w = minGridX; w < maxGridX; w++) {
+            for (let h = gridMinZ; h < gridMaxZ; h++) {
+                for (let w = gridMinX; w < gridMaxX; w++) {
                     this.walkableGrid[h][w] = false;
                 }
             }
         }
-        console.log(this.walkableGrid);
 
         // Generate polygons
         const processed = Array(numCellsHeight).fill(null).map(() => Array(numCellsWidth).fill(false));
@@ -87,9 +87,6 @@ class NavMeshManager {
                 }
             }
         }
-        console.log(processed);
-
-        console.log(this.polygons);
 
         this.GetPolygonsData();
     }
@@ -109,8 +106,6 @@ class NavMeshManager {
         for (let poly of this.polygons) {
             let min = [poly.minX * this.cellSize, poly.minZ * this.cellSize];
             let max = [(poly.maxX + 1) * this.cellSize, (poly.maxZ + 1) * this.cellSize];
-
-            // console.log(min, max);
 
             vertices.push(min[0] - this.groundWidth / 2.0, -0.498, max[1] - this.groundHeight / 2.0);
             vertices.push(min[0] - this.groundWidth / 2.0, -0.498, min[1] - this.groundHeight / 2.0);
