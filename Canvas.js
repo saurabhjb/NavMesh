@@ -41,6 +41,8 @@ var firstIntersectionPoint = false;
 
 var lastIntersectionPoint = vec3.create();
 
+var navMeshObj = null;
+
 function mouseMove(event) {
     if (leftButtonPressed) {
 
@@ -480,18 +482,7 @@ function createOverlayRenderPassResources() {
 
     gl.bindVertexArray(null);
 
-    // Navmesh
-    vao_navmesh = gl.createVertexArray();
-    gl.bindVertexArray(vao_navmesh);
-
-    vbo_navmesh_vertices = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_navmesh_vertices);
-    gl.bufferData(gl.ARRAY_BUFFER, 4 * 3 * 4, gl.DYNAMIC_DRAW);
-    gl.vertexAttribPointer(SHADER_ATTRIBUTES.POSITION, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-    gl.bindVertexArray(null);
+    generateNavMeshResources();
 }
 
 function init() {
@@ -519,12 +510,14 @@ function init() {
     scene.ground = new Quad("ground", 10.0, 10.0, 11, 11);
     scene.ground.UpdatePosition(0.0, -0.5, 0.0);
     // Cube setup
-    scene.cubes.push(new Cuboid("Obs1", 1.0, [0.5, 0.0, 0.5]));
+    scene.cubes.push(new Cuboid("Obs1", 1.0, [-4.5, 0.0, -4.5]));
     scene.cubes.push(new Cuboid("Obs2", 1.0, [1.5, 0.0, 1.5]));
     scene.cubes.push(new Cuboid("Obs3", 1.0, [2.5, 0.0, 2.5]));
     scene.cubes.push(new Cuboid("Obs4", 1.0, [3.5, 0.0, 3.5]));
     // Agent setup
     scene.agent = new Cylinder("agent", 1.0, 2.0, 10, [2.5, 0.5, 1.5]);
+
+    navMeshObj = new NavMeshManager(scene, 1.0);
 
     createFramebufferPassResources();
     createQuadRenderPassResources();
@@ -594,9 +587,38 @@ function findIntersectionPoint(mouseX, mouseY, planePoint, planeNormal) {
     return (intersectionPoint);
 }
 
+var once = true;
+var numPolygons = 0;
+
+function generateNavMeshResources() {
+    if (vao_navmesh)
+        gl.deleteVertexArray(vao_navmesh);
+
+    if (vbo_navmesh_vertices)
+        gl.deleteBuffer(vbo_navmesh_vertices)
+
+    // Navmesh
+    vao_navmesh = gl.createVertexArray();
+    gl.bindVertexArray(vao_navmesh);
+
+    var navVertices = navMeshObj.GetPolygonsData();
+    numPolygons = navVertices / (4 * 3);
+
+    vbo_navmesh_vertices = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_navmesh_vertices);
+    gl.bufferData(gl.ARRAY_BUFFER, navVertices, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(SHADER_ATTRIBUTES.POSITION, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    gl.bindVertexArray(null);
+}
+
 function draw() {
     // Render Scene
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, colorAttachemnt_ObjIds, 0);
 
     gl.drawBuffers([
         gl.COLOR_ATTACHMENT0,
@@ -664,22 +686,22 @@ function draw() {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindVertexArray(null);
 
-    var navVertices = new Float32Array([
-        5.0, -0.4899, -5.0,
-        -5.0, -0.4899, -5.0,
-        -5.0, -0.4899, 5.0,
-        5.0, -0.4899, 5.0
-    ]);
+    if (once) {
+        navVertices = navMeshObj.GetPolygonsData();
+        numPolygons = navVertices.length / (4 * 3);
+
+        console.log(numPolygons);
+
+        once = false;
+    }
 
     // NavMesh
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.uniform4fv(uniform_overlay_color, navmeshColor);
     gl.bindVertexArray(this.vao_navmesh);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo_navmesh_vertices);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, navVertices);
-    gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    for (let i = 0; i < numPolygons; i++)
+        gl.drawArrays(gl.TRIANGLE_FAN, i * 4, 4);
     gl.bindVertexArray(null);
 
     gl.disable(gl.BLEND);
