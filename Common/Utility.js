@@ -1,10 +1,9 @@
-class ShaderBinding
-{
-    ShaderBinding(attribute, name) {
+class ShaderBinding {
+    constructor(attribute, name) {
         this.attribute = attribute;
         this.name = name;
     }
-}
+};
 
 function compileShader(shaderType, shaderSource) {
     var shaderObject = gl.createShader(shaderType);
@@ -27,7 +26,6 @@ function compileShader(shaderType, shaderSource) {
             }
             log += "Error: " + error;
             console.log(log);
-            uninit();
         }
     }
 
@@ -49,7 +47,6 @@ function createProgram(vertex, fragment, shaderBindings) {
 
         if (error.length > 0) {
             console.log("Program Error: " + error);
-            uninit();
         }
     }
 
