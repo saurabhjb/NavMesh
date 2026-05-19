@@ -166,12 +166,6 @@ class NavMeshManager {
                             var startOverlap = Math.max(eg0[0], ng0[0]);
                             var endOverlap = Math.min(eg1[0], ng1[0]);
 
-                            // if (count == 3) {
-                            //     console.log(eData);
-                            //     console.log(existingEdge, newEdge);
-                            //     console.log(eg0, eg1, ng0, ng1);
-                            // }
-
                             if (startOverlap < endOverlap) {
                                 // Split
                                 if (eg0[0] < ng0[0]) {
@@ -182,7 +176,7 @@ class NavMeshManager {
                                         edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p1, existingEdge.portalIndices[0]));
                                         edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
 
-                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, newEdge.portalIndices[0]));
 
                                     } else if (eg1[0] > ng1[0]) {
                                         // eg0 - ng0 - ng1 - eg1
@@ -257,69 +251,69 @@ class NavMeshManager {
                                 if (eg0[1] < ng0[1]) {
                                     if (eg1[1] < ng1[1]) {
                                         // eg0 - ng0 - eg1 - ng1
-                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p0, existingEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p0, existingEdge.portalIndices[0]));
                                         
-                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
 
-                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, existingEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, newEdge.portalIndices[0]));
 
                                     } else if (eg1[1] > ng1[1]) {
                                         // eg0 - ng0 - ng1 - eg1
-                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p0, existingEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p0, existingEdge.portalIndices[0]));
                                         
-                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
 
-                                        edgesToAdd.push(new Edge(newEdge.p1, existingEdge.p1, existingEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(newEdge.p1, existingEdge.p1, existingEdge.portalIndices[0]));
                                     } else { // if they are same
                                         // eg0 - ng0 - ng1/eg1
-                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p0, existingEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p0, existingEdge.portalIndices[0]));
                                         
-                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
                                     }
                                 } else if (eg0[1] > ng0[1]) {
                                     if (ng1[1] < eg1[1]) {
                                         // ng0 - eg0 - eg1 - ng1
-                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p0, newEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p0, newEdge.portalIndices[0]));
                                         
-                                        edgesToAdd.push(new Edge(existingEdge.p0, existingEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(existingEdge.p0, existingEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
 
-                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, newEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, newEdge.portalIndices[0]));
                                     } else if (eg1[1] > ng1[1]) {
                                         // ng0 - eg0 - ng1 - eg1
-                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p0, newEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p0, newEdge.portalIndices[0]));
                                         
-                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
 
-                                        edgesToAdd.push(new Edge(newEdge.p1, existingEdge.p1, existingEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(newEdge.p1, existingEdge.p1, existingEdge.portalIndices[0]));
                                     } else { // if they are same
                                         // ng0 - eg0 - ng1/eg1
-                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p0, newEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p0, newEdge.portalIndices[0]));
                                         
-                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(existingEdge.p0, newEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
                                     }
                                 } else { // if they are same
                                     if (eg1[1] < ng1[1]) {
                                         // eg0/ng0 - eg1 - ng1
-                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(newEdge.p0, existingEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
                                         
-                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, newEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(existingEdge.p1, newEdge.p1, newEdge.portalIndices[0]));
                                     } else if (eg1[1] > ng1[1]) {
                                         // eg0/ng0 - ng1 - eg1
-                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
                                         
-                                        edgesToAdd.push(new Edge(newEdge.p1, existingEdge.p1, existingEdge.portalIndices[1]));
+                                        edgesToAdd.push(new Edge(newEdge.p1, existingEdge.p1, existingEdge.portalIndices[0]));
                                     } else { // if they are same
                                         // eg0/ng0 - ng1/eg1
-                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[1]));
-                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[1]);
+                                        edgesToAdd.push(new Edge(newEdge.p0, newEdge.p1, existingEdge.portalIndices[0]));
+                                        edgesToAdd[edgesToAdd.length - 1].portalIndices.push(newEdge.portalIndices[0]);
                                     }
                                 }
 
@@ -341,13 +335,8 @@ class NavMeshManager {
             }
             
             portalIndex = portalIndex + 1;
-            count = count + 1;
-            // if (count == 4)
-                // break;
         }
         
-        console.log(this.edges);
-
         this.GetPolygonsData();
     }
 

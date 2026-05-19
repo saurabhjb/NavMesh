@@ -743,10 +743,8 @@ function draw() {
     gl.bindVertexArray(vao_graphEdges);
     gl.lineWidth(10.0);
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphEdges);
-    //for (let i = 0; i < numEdges; i++)
-    let lineIndex = counter % numEdges;
-    // console.log(lineIndex);
-         gl.drawArrays(gl.LINES, lineIndex * 2, 2);
+    for (let i = 0; i < numEdges; i++)
+         gl.drawArrays(gl.LINES, i * 2, 2);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindVertexArray(null);
 
