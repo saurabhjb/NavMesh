@@ -23,19 +23,8 @@ class Edge {
 };
 
 class NavMeshManager {
-    constructor(scene, cellSize) {
-        this.groundWidth = scene.ground.max[0] - scene.ground.min[0];        
-        this.groundHeight = scene.ground.max[2] - scene.ground.min[2];
-
-        this.cellSize = cellSize;
-
-        let numCellsWidth = Math.ceil(this.groundWidth / this.cellSize);
-        let numCellsHeight = Math.ceil(this.groundHeight / this.cellSize);
-
-        this.polygons = [];
-
-        // Generate walkability grid
-        this.walkableGrid = Array(numCellsHeight).fill(null).map(() => Array(numCellsWidth).fill(true));
+    GenerateWalkableGrid(scene) {
+        this.walkableGrid = Array(this.numCellsHeight).fill(null).map(() => Array(this.numCellsWidth).fill(true));
         for (let cube of scene.cubes) {
             let position = cube.position;
             
@@ -45,10 +34,10 @@ class NavMeshManager {
             let max = [position[0] + l2 + this.groundWidth / 2.0 + scene.agent.diameter / 2.0, position[2] + l2 + this.groundHeight / 2.0 + scene.agent.diameter / 2.0];
 
             // get grid number
-            let gridMinX = Math.floor(min[0] / cellSize);
-            let gridMinZ = Math.floor(min[1] / cellSize);
-            let gridMaxX = Math.ceil(max[0] / cellSize);
-            let gridMaxZ = Math.ceil(max[1] / cellSize);
+            let gridMinX = Math.floor(min[0] / this.cellSize);
+            let gridMinZ = Math.floor(min[1] / this.cellSize);
+            let gridMaxX = Math.ceil(max[0] / this.cellSize);
+            let gridMaxZ = Math.ceil(max[1] / this.cellSize);
 
             for (let h = gridMinZ; h < gridMaxZ; h++) {
                 for (let w = gridMinX; w < gridMaxX; w++) {
@@ -56,21 +45,22 @@ class NavMeshManager {
                 }
             }
         }
+    }
 
-        // Generate polygons
-        const processed = Array(numCellsHeight).fill(null).map(() => Array(numCellsWidth).fill(false));
+    GeneratePolygons() {
+        const processed = Array(this.numCellsHeight).fill(null).map(() => Array(this.numCellsWidth).fill(false));
 
-        for (let z = 0; z < numCellsHeight; z++) {
-            for (let x = 0; x < numCellsWidth; x++) {
+        for (let z = 0; z < this.numCellsHeight; z++) {
+            for (let x = 0; x < this.numCellsWidth; x++) {
                 if (this.walkableGrid[z][x] && !processed[z][x]) {
                     let minX = x;
                     let maxX = x;
                     let maxZ = z;
 
-                    while (maxX + 1 < numCellsWidth && this.walkableGrid[z][maxX + 1] && !processed[z][maxX + 1])
+                    while (maxX + 1 < this.numCellsWidth && this.walkableGrid[z][maxX + 1] && !processed[z][maxX + 1])
                         maxX++;
 
-                    while (maxZ + 1 < numCellsHeight) {
+                    while (maxZ + 1 < this.numCellsHeight) {
                         let canExpand = true;
 
                         for (let xx = minX; xx <= maxX; xx++) {
@@ -96,12 +86,9 @@ class NavMeshManager {
                 }
             }
         }
+    }
 
-        this.graphPoints = [];
-        this.edges = [];
-        this.portals = [];
-
-        // Generate portals
+    GeneratePortals() {
         for (let poly of this.polygons) {
             let g0 = [poly.minX, poly.minZ];
             let g1 = [poly.maxX + 1, poly.minZ];
@@ -131,8 +118,9 @@ class NavMeshManager {
             
             this.portals.push([index_g0, index_g1, index_g2, index_g3]);
         }
+    }
 
-        // Generate graphs and edges
+    GeneratePortalEdges() {
         let count = 0;
         let portalIndex = 0;
         for (let portal of this.portals) {
@@ -336,8 +324,35 @@ class NavMeshManager {
             
             portalIndex = portalIndex + 1;
         }
-        
-        this.GetPolygonsData();
+    }
+
+    constructor(scene, cellSize) {
+        this.groundWidth = scene.ground.max[0] - scene.ground.min[0];        
+        this.groundHeight = scene.ground.max[2] - scene.ground.min[2];
+
+        this.cellSize = cellSize;
+
+        this.numCellsWidth = Math.ceil(this.groundWidth / this.cellSize);
+        this.numCellsHeight = Math.ceil(this.groundHeight / this.cellSize);
+
+        this.polygons = [];
+
+        this.walkableGrid = []
+        this.graphPoints = [];
+        this.edges = [];
+        this.portals = [];
+
+        // Generate walkability grid
+        this.GenerateWalkableGrid(scene);
+
+        // Generate polygons
+        this.GeneratePolygons();
+
+        // Generate portals
+        this.GeneratePortals();
+
+        // Generate portal edges
+        this.GeneratePortalEdges();
     }
 
     CheckIfEdgeExists(e) {

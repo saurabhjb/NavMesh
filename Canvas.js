@@ -518,9 +518,9 @@ function init() {
     scene.ground.UpdatePosition(0.0, -0.5, 0.0);
     // Cube setup
     scene.cubes.push(new Cuboid("Obs1", 1.0, [-4.0, 0.0, -4.0]));
-    scene.cubes.push(new Cuboid("Obs2", 1.0, [1.5, 0.0, 1.5]));
-    scene.cubes.push(new Cuboid("Obs3", 1.0, [1.5, 0.0, 3.5]));
-    scene.cubes.push(new Cuboid("Obs4", 1.0, [3.5, 0.0, 3.5]));
+    scene.cubes.push(new Cuboid("Obs2", 1.0, [2.5, 0.0, 1.5]));
+    scene.cubes.push(new Cuboid("Obs3", 1.0, [0.5, 0.0, 3.5]));
+    scene.cubes.push(new Cuboid("Obs4", 1.0, [3.5, 0.0, -1.5]));
     // Agent setup
     scene.agent = new Cylinder("agent", 1.0, 2.0, 10, [2.5, 0.5, 1.5]);
 
