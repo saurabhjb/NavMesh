@@ -135,7 +135,7 @@ function mouseDown(event) {
         //Identify selected object
         getObjID(pixelX, pixelY);
 
-        if (currentSelectedObject == scene.groundObjID && firstIntersectionPoint) {
+        if (currentSelectedObject == scene.groundObjID && firstIntersectionPoint && !altKeyIsPressed) {
             scene.UpdateFinalPosition(findIntersectionPoint(pixelX, pixelY, vec3.fromValues(0.0, -0.5, 0.0), vec3.fromValues(0.0, 1.0, 0.0)));
         }
     }
@@ -152,6 +152,8 @@ function keyUp(event) {
     }
 }
 
+var counter = 0;
+
 function keyDown(event) {
     switch (event.keyCode) {
         case 27:
@@ -165,6 +167,10 @@ function keyDown(event) {
 
         case 18:
             altKeyIsPressed = true;
+            break;
+
+        case 65:
+            counter = counter + 1;
             break;
     }
 }
@@ -203,8 +209,16 @@ var vbo_pointVertex = null;
 var vao_navmesh = null;
 var vbo_navmesh_vertices = null;
 
+var vao_graphPoints = null;
+var vbo_graphPoints = null;
+
+var vao_graphEdges = null;
+var vbo_graphEdges = null;
+
 var pointColor = [1.0, 1.0, 0.0, 1.0];
 var navmeshColor = [0.0, 1.0, 1.0, 0.15];
+var graphPointColor = [1.0, 0.0, 0.0, 1.0];
+var graphEdgeColor = [1.0, 0.0, 1.0, 1.0];
 
 var overlayRenderProgram = null;
 var uniform_overlay_m_matrix = null;
@@ -505,12 +519,12 @@ function init() {
     // Cube setup
     scene.cubes.push(new Cuboid("Obs1", 1.0, [-4.0, 0.0, -4.0]));
     scene.cubes.push(new Cuboid("Obs2", 1.0, [1.5, 0.0, 1.5]));
-    scene.cubes.push(new Cuboid("Obs3", 1.0, [2.5, 0.0, 2.5]));
+    scene.cubes.push(new Cuboid("Obs3", 1.0, [1.5, 0.0, 3.5]));
     scene.cubes.push(new Cuboid("Obs4", 1.0, [3.5, 0.0, 3.5]));
     // Agent setup
     scene.agent = new Cylinder("agent", 1.0, 2.0, 10, [2.5, 0.5, 1.5]);
 
-    navMeshObj = new NavMeshManager(scene, 1.0);
+    navMeshObj = new NavMeshManager(scene, 0.25);
 
     createFramebufferPassResources();
     createQuadRenderPassResources();
@@ -581,6 +595,8 @@ function findIntersectionPoint(mouseX, mouseY, planePoint, planeNormal) {
 }
 
 var numPolygons = 0;
+var numGraphPoints = 0;
+var numEdges = 0;
 
 function generateNavMeshResources() {
     if (vao_navmesh)
@@ -603,6 +619,31 @@ function generateNavMeshResources() {
     gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
+    gl.bindVertexArray(null);
+
+    // Graph Points and Edges
+    var data  = navMeshObj.GetGraphPointsAndEdges();
+    numGraphPoints = data.points.length / 3;
+    numEdges = data.edges.length / (2 * 3);
+
+    vao_graphPoints = gl.createVertexArray();
+    gl.bindVertexArray(vao_graphPoints);
+    vbo_graphPoints = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphPoints);
+    gl.bufferData(gl.ARRAY_BUFFER, data.points, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(SHADER_ATTRIBUTES.POSITION, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
+
+    vao_graphEdges = gl.createVertexArray();
+    gl.bindVertexArray(vao_graphEdges);
+    vbo_graphEdges = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphEdges);
+    gl.bufferData(gl.ARRAY_BUFFER, data.edges, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(SHADER_ATTRIBUTES.POSITION, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindVertexArray(null);
 }
 
@@ -686,8 +727,28 @@ function draw() {
     for (let i = 0; i < numPolygons; i++)
         gl.drawArrays(gl.TRIANGLE_FAN, i * 4, 4);
     gl.bindVertexArray(null);
-
     gl.disable(gl.BLEND);
+
+    // GraphPoints
+    gl.uniform4fv(uniform_overlay_color, graphPointColor);
+    gl.bindVertexArray(vao_graphPoints);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphPoints);
+    for (let i = 0; i < numGraphPoints; i++)
+        gl.drawArrays(gl.POINTS, i, 1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
+    
+    // Edges
+    gl.uniform4fv(uniform_overlay_color, graphEdgeColor);
+    gl.bindVertexArray(vao_graphEdges);
+    gl.lineWidth(10.0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphEdges);
+    //for (let i = 0; i < numEdges; i++)
+    let lineIndex = counter % numEdges;
+    // console.log(lineIndex);
+         gl.drawArrays(gl.LINES, lineIndex * 2, 2);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
 
     gl.useProgram(null);
 
