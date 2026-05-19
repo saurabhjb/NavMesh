@@ -179,6 +179,8 @@ function keyDown(event) {
 }
 
 function GeneratePath() {
+    pathGenerated = false;
+
     let path = navMeshObj.FindShortestPath(scene.agent.position, scene.finalPosition);
     let vertexData = [];
 
@@ -207,6 +209,8 @@ function GeneratePath() {
     numVerticesInPath = vertices.length / 3;
 
     gl.bindVertexArray(null);
+
+    pathGenerated = true;
 }
 
 function scroll(event) {
@@ -792,13 +796,13 @@ function draw() {
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindVertexArray(null);
 
-            if (pathGenerated) {
+        if (pathGenerated) {
             // Path Edges
             gl.uniform4fv(uniform_overlay_color, pathEdgeColor);
             gl.bindVertexArray(vao_path);
             gl.lineWidth(10.0);
             gl.bindBuffer(gl.ARRAY_BUFFER, vbo_path);
-            for (let i = 0; i < numVerticesInPath; i++)
+            for (let i = 0; i < numVerticesInPath - 1; i++)
                 gl.drawArrays(gl.LINES, i, 2);
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
             gl.bindVertexArray(null);
