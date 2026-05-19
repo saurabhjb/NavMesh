@@ -22,6 +22,13 @@ class Edge {
     }
 };
 
+class GraphNode {
+    constructor() {
+        this.graphPointIndex = -1;
+        this.connectedEdges = new Map();
+    }
+};
+
 class NavMeshManager {
     GenerateWalkableGrid(scene) {
         this.walkableGrid = Array(this.numCellsHeight).fill(null).map(() => Array(this.numCellsWidth).fill(true));
@@ -417,6 +424,207 @@ class NavMeshManager {
         return (nodeIndex);
     }
 
+    FindPolygonID(locX, locZ) {
+        for (let portal in this.portals) {
+            let portalMin = this.graphPoints[this.portals[portal][0]];
+            let portalMax = this.graphPoints[this.portals[portal][2]];
+
+            if (portalMin[0] <= locX && locX <= portalMax[0] - 1) {
+                if (portalMin[1] <= locZ && locZ <= portalMax[1] - 1) {
+                    return (parseInt(portal));
+                }
+            }
+        }
+        return (-1);
+    }
+
+    FindNearestPoint(locX, locZ) {
+        let nearestIndex = -1;
+        let minDistance = Infinity;
+
+        for (let i = 0; i < this.graphPoints.length; i++) {
+            let dx = this.graphPoints[i][0] - locX;
+            let dz = this.graphPoints[i][1] - locZ;
+            let distance = dx * dx + dz * dz;
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestIndex = i;
+            }
+        }
+
+        return nearestIndex;
+    }
+
+    Heuristic(fromIndex, toIndex) {
+        let from = this.graphPoints[fromIndex];
+        let to = this.graphPoints[toIndex];
+        
+        let dx = from[0] - to[0];
+        let dz = from[1] - to[1];
+        
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    Distance(fromPoint, toPoint) {
+        let from = this.graphPoints[fromPoint];
+        let to = this.graphPoints[toPoint];
+        
+        let dx = from[0] - to[0];
+        let dz = from[1] - to[1];
+        
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    EdgeIsConnected(startEdge, endEdge) {
+        for (let edge of this.edges) {
+            if ((edge.p0 === startEdge && edge.p1 === endEdge) ||
+                (edge.p0 === endEdge && edge.p1 === startEdge)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    GetNeighbors(nodeIndex) {
+        let neighbors = [];
+        for (let edge of this.edges) {
+            if (edge.p0 === nodeIndex) {
+                neighbors.push(edge.p1);
+            } else if (edge.p1 === nodeIndex) {
+                neighbors.push(edge.p0);
+            }
+        }
+        return neighbors;
+    }
+
+    FindPath(startPos, endPos) {
+        let startX = Math.floor((startPos[0] + this.groundWidth / 2.0) / this.cellSize);
+        let startZ = Math.floor((startPos[2] + this.groundHeight / 2.0) / this.cellSize);
+
+        let endX = Math.floor((endPos[0] + this.groundWidth / 2.0) / this.cellSize);
+        let endZ = Math.floor((endPos[2] + this.groundHeight / 2.0) / this.cellSize);
+
+        let polygonStart = this.FindPolygonID(startX, startZ);
+        let polygonEnd = this.FindPolygonID(endX, endZ);
+
+        if (polygonStart == -1 || polygonEnd == -1) {
+            return [];
+        }
+
+        let startNode = this.FindNearestPoint(startX, startZ);
+        let endNode = this.FindNearestPoint(endX, endZ);
+
+        // A* algorithm
+        let openSet = [startNode];
+        let cameFrom = {};
+        let gScore = {};
+        let fScore = {};
+
+        // Initialize scores
+        for (let i = 0; i < this.graphPoints.length; i++) {
+            gScore[i] = Infinity;
+            fScore[i] = Infinity;
+        }
+
+        gScore[startNode] = 0;
+        fScore[startNode] = this.Heuristic(startNode, endNode);
+
+        while (openSet.length > 0) {
+            // Find node with lowest fScore
+            let current = openSet[0];
+            let currentIndex = 0;
+
+            for (let i = 1; i < openSet.length; i++) {
+                if (fScore[openSet[i]] < fScore[current]) {
+                    current = openSet[i];
+                    currentIndex = i;
+                }
+            }
+
+            if (current === endNode) {
+                // Reconstruct path
+                let path = [this.graphPoints[current]];
+                while (cameFrom[current] !== undefined) {
+                    current = cameFrom[current];
+                    path.unshift(this.graphPoints[current]);
+                }
+                return path;
+            }
+
+            openSet.splice(currentIndex, 1);
+            let neighbors = this.GetNeighbors(current);
+
+            for (let neighbor of neighbors) {
+                let tentativeGScore = gScore[current] + this.Distance(current, neighbor);
+
+                if (tentativeGScore < gScore[neighbor]) {
+                    cameFrom[neighbor] = current;
+                    gScore[neighbor] = tentativeGScore;
+                    fScore[neighbor] = gScore[neighbor] + this.Heuristic(neighbor, endNode);
+
+                    if (!openSet.includes(neighbor)) {
+                        openSet.push(neighbor);
+                    }
+                }
+            }
+        }
+
+        return [];
+    }
+
+    GetEdgeFromPoints(p0, p1) {
+
+    }
+
+    FindShortestPath(startPos, endPos) {
+        let graphPath = this.FindPath(startPos, endPos);
+        let startX = Math.floor((startPos[0] + this.groundWidth / 2.0) / this.cellSize);
+        let startZ = Math.floor((startPos[2] + this.groundHeight / 2.0) / this.cellSize);
+        let endX = Math.floor((endPos[0] + this.groundWidth / 2.0) / this.cellSize);
+        let endZ = Math.floor((endPos[2] + this.groundHeight / 2.0) / this.cellSize);
+
+        let path = [];
+
+        if (graphPath.length > 0) {
+            path.push([startX, startZ]);
+            for (let p of graphPath) {
+                path.push(p);
+            }
+            path.push([endX, endZ]);
+
+            // let polygonStart = this.FindPolygonID(startX, startZ);
+            // let polygonEnd = this.FindPolygonID(endX, endZ);
+            
+            // // Simplify path
+            // let totalEdges = path.length;
+
+            // for (let i = 0; i < totalEdges; i++) {
+            //     if (i == 0) {
+
+            //     } else if (j == totalEdges - 1) {
+
+            //     } else {
+
+            //     }
+            // }
+
+            // console.log(path.length - 1);
+        }
+
+        let finalPath = [];
+        if (path.length > 0) {
+            // finalPath = [[startPos[0], -0.486, startPos[2]]];
+            for (let gridPoint of path) {
+                let worldX = gridPoint[0] * this.cellSize - this.groundWidth / 2.0;
+                let worldZ = gridPoint[1] * this.cellSize - this.groundHeight / 2.0;
+                finalPath.push([worldX, -0.496, worldZ]);
+            }
+            // finalPath.push([endPos[0], -0.486, endPos[2]]);
+        }
+        return finalPath;
+    }
+
     // For rendering purpose
     GetPolygonsData() {
         let vertices = [];
@@ -454,5 +662,9 @@ class NavMeshManager {
             points: new Float32Array(points),
             edges: new Float32Array(edges)
         });
+    }
+
+    GetShortestPath() {
+
     }
 }

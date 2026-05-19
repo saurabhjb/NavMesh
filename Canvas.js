@@ -45,7 +45,6 @@ var navMeshObj = null;
 
 function mouseMove(event) {
     if (leftButtonPressed) {
-
         if (firstClick) {
             lastX = event.clientX;
             lastY = event.clientY;
@@ -156,11 +155,6 @@ var counter = 0;
 
 function keyDown(event) {
     switch (event.keyCode) {
-        case 27:
-            uninit();
-            window.close();
-            break;
-
         case 70:
             toggleFullscreen();
             break;
@@ -172,7 +166,45 @@ function keyDown(event) {
         case 65:
             counter = counter + 1;
             break;
+
+        case 66:
+            GeneratePath();
+            break;
     }
+}
+
+function GeneratePath() {
+    console.log("Called GeneratePath");
+
+    let path = navMeshObj.FindShortestPath(scene.agent.position, scene.finalPosition);
+    let vertexData = [];
+
+    console.log(path);
+    for (let p of path) {
+        vertexData.push(p[0], p[1], p[2]);
+    }
+    
+    var vertices = new Float32Array(vertexData);
+
+    if (vao_path == null) {
+        gl.deleteVertexArray(vao_path);
+    }
+    
+    if (vbo_path) {
+        gl.deleteBuffer(vbo_path);
+    }
+
+    gl.bindVertexArray(vao_path);
+    vbo_path = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_path);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(SHADER_ATTRIBUTES.POSITION, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    numVerticesInPath = vertices.length / 3;
+
+    gl.bindVertexArray(null);
 }
 
 function scroll(event) {
@@ -215,10 +247,14 @@ var vbo_graphPoints = null;
 var vao_graphEdges = null;
 var vbo_graphEdges = null;
 
+var vao_path = null;
+var vbo_path = null;
+
 var pointColor = [1.0, 1.0, 0.0, 1.0];
 var navmeshColor = [0.0, 1.0, 1.0, 0.15];
 var graphPointColor = [1.0, 0.0, 0.0, 1.0];
 var graphEdgeColor = [1.0, 0.0, 1.0, 1.0];
+var pathEdgeColor = [1.0, 1.0, 1.0, 1.0];
 
 var overlayRenderProgram = null;
 var uniform_overlay_m_matrix = null;
@@ -525,6 +561,7 @@ function init() {
     scene.agent = new Cylinder("agent", 1.0, 2.0, 10, [2.5, 0.5, 1.5]);
 
     navMeshObj = new NavMeshManager(scene, 0.25);
+    // navMeshObj.FindPath();
 
     createFramebufferPassResources();
     createQuadRenderPassResources();
@@ -597,6 +634,7 @@ function findIntersectionPoint(mouseX, mouseY, planePoint, planeNormal) {
 var numPolygons = 0;
 var numGraphPoints = 0;
 var numEdges = 0;
+var numVerticesInPath = 0;
 
 function generateNavMeshResources() {
     if (vao_navmesh)
@@ -745,6 +783,16 @@ function draw() {
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphEdges);
     for (let i = 0; i < numEdges; i++)
          gl.drawArrays(gl.LINES, i * 2, 2);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
+
+    // Path Edges
+    gl.uniform4fv(uniform_overlay_color, pathEdgeColor);
+    gl.bindVertexArray(vao_path);
+    gl.lineWidth(10.0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_path);
+    for (let i = 0; i < numVerticesInPath; i++)
+         gl.drawArrays(gl.LINES, i, 2);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindVertexArray(null);
 
