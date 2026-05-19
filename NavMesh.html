@@ -20,17 +20,36 @@
     </body>
 
     <br>
-    Controls
-    <button>Setup</button>
-    <button>Generate NavMesh</button>
-    <button>Find Path</button>
-    <button>Show/Hide Debug Oberlay</button>
+    <button id="setupbutton" onclick="SetupPhase()">Setup</button>
+    <button id="navmeshbutton" onclick="GenerateNavMesh()">Generate NavMesh</button>
+    <button id="pathbutton" onclick="GenerateNavPath()">Find Path</button>
+    <button id="debugbutton" onclick="ShowDebugOverlay()">Show/Hide Debug Overlay</button>
 
     <h3>Guidelines</h3>
+    <section>
+    <b>Setup Phase:</b> Move the cubes and agent to reuired position</p>
+    Click on "Setup" to edit the layout and generate NavMesh again.<br>
+    </section><br>
+
+    <section>
+    <b>Generate NavMesh Phase:</b> This created NavMesh for the grid. <br>
+    Click on "Generate Nav Mesh" button. (This will enable "Find Path" and "Show/Hide Debug Overlay" buttons)<br>
+    This will give us a NavMesh which has Rectangle Portals. It can be visualized using Debug view.<br>
+    </section><br>
+
+    <section>
+    <b>Find Path Phase:</b><br>
     Click on the ground to select 'target position' for agent. (It will be marked by yellow point.)<br>
-    Click and drag objects in the scene to move them around.
-    <h3>Camera Controls</h3>
-    Hold 'alt' key to move the camera.
+    Click and drag agent in the scene to move it around. (It will me blue color cylinder.)<br>
+    <br>
+    Click on "Find Path" button to find out the shortest path using A* algorithm.<br>
+    Note: It will not generate path if final destination is on forbidden region.<br>
+    </section>
+    <br>
+    <section>
+    <b>Camera Controls:</b><br> Hold 'alt' key to move the camera.
+    </section>
+
     <h3>Legend</h3>
     Blue  -> NavMesh agent<br>
     Grey  -> Cubes<br>
@@ -38,9 +57,8 @@
     Yellow -> Agent Target Position
 
     <h3>Remaining Work</h3>
+    * Simplify Path <br>
+    * Animate Movement <br>
+    * Camera Follow <br>
     * Rebuild Nav Mesh on cube move <br>
-    * Cube collission <br>
-    * Movement <br>
-    * Camera <br>
-    * Convex Polygon 
 </html>

@@ -43,6 +43,11 @@ var lastIntersectionPoint = vec3.create();
 
 var navMeshObj = null;
 
+var allowAgentMovement = true;
+var allowCubeMovement = true;
+var allowFinalPointMovement = true;
+var pathGenerated = false;
+
 function mouseMove(event) {
     if (leftButtonPressed) {
         if (firstClick) {
@@ -74,10 +79,12 @@ function mouseMove(event) {
 
                 lastIntersectionPoint = intersectionPoint;
 
-                if (currentSelectedObject < scene.groundObjID) {
+                if (currentSelectedObject < scene.agentObjID && allowCubeMovement) {
+                    scene.UpdatePosition(currentSelectedObject, positionOffset);
+                } else if (currentSelectedObject == scene.agentObjID && allowAgentMovement) {
                     scene.UpdatePosition(currentSelectedObject, positionOffset);
                 }
-                else if (currentSelectedObject == scene.groundObjID) {
+                else if (currentSelectedObject == scene.groundObjID && allowFinalPointMovement) {
                     scene.AddToFinalPosition(positionOffset);
                 }
             }
@@ -151,8 +158,6 @@ function keyUp(event) {
     }
 }
 
-var counter = 0;
-
 function keyDown(event) {
     switch (event.keyCode) {
         case 70:
@@ -174,12 +179,9 @@ function keyDown(event) {
 }
 
 function GeneratePath() {
-    console.log("Called GeneratePath");
-
     let path = navMeshObj.FindShortestPath(scene.agent.position, scene.finalPosition);
     let vertexData = [];
 
-    console.log(path);
     for (let p of path) {
         vertexData.push(p[0], p[1], p[2]);
     }
@@ -261,6 +263,9 @@ var uniform_overlay_m_matrix = null;
 var uniform_overlay_v_matrix = null;
 var uniform_overlay_p_matrix = null;
 var uniform_overlay_color = null;
+
+var navmeshInitialized = false;
+var showDebugOverlay = false;
 
 function main() {
     canvas = document.getElementById("WGL2");
@@ -529,8 +534,6 @@ function createOverlayRenderPassResources() {
     gl.enableVertexAttribArray(SHADER_ATTRIBUTES.POSITION);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindVertexArray(null);
-
-    generateNavMeshResources();
 }
 
 function init() {
@@ -539,6 +542,9 @@ function init() {
         console.log("Failed to get the rendering Context from WebGL2.");
         return;
     }
+
+    document.getElementById('pathbutton').disabled = true;
+    document.getElementById('debugbutton').disabled = true;
 
     cam = new Camera();
 
@@ -558,10 +564,7 @@ function init() {
     scene.cubes.push(new Cuboid("Obs3", 1.0, [0.5, 0.0, 3.5]));
     scene.cubes.push(new Cuboid("Obs4", 1.0, [3.5, 0.0, -1.5]));
     // Agent setup
-    scene.agent = new Cylinder("agent", 1.0, 2.0, 10, [2.5, 0.5, 1.5]);
-
-    navMeshObj = new NavMeshManager(scene, 0.25);
-    // navMeshObj.FindPath();
+    scene.agent = new Cylinder("agent", 1.0, 2.0, 10, [-2.5, 0.5, 1.5]);
 
     createFramebufferPassResources();
     createQuadRenderPassResources();
@@ -738,63 +741,69 @@ function draw() {
 
     // Render overlay
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, null, 0);
-
+    
     gl.useProgram(overlayRenderProgram);
-
+    
     gl.uniformMatrix4fv(uniform_overlay_p_matrix, false, projMat);
     gl.uniformMatrix4fv(uniform_overlay_v_matrix, false, viewMat);
-
+    
     modelMat = mat4.create();
     mat4.translate(modelMat, modelMat, [0.0, 0.0, 0.0]);
     gl.uniformMatrix4fv(uniform_overlay_m_matrix, false, modelMat);
     
-    // Point
-    gl.uniform4fv(uniform_overlay_color, pointColor);
-    gl.bindVertexArray(this.vao_point);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo_pointVertex);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, scene.finalPosition);
-    gl.drawArrays(gl.POINTS, 0, 1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindVertexArray(null);
+    if (navmeshInitialized) {
+        // Point
+        gl.uniform4fv(uniform_overlay_color, pointColor);
+        gl.bindVertexArray(this.vao_point);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo_pointVertex);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, scene.finalPosition);
+        gl.drawArrays(gl.POINTS, 0, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindVertexArray(null);
+    }
 
-    // NavMesh
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.uniform4fv(uniform_overlay_color, navmeshColor);
-    gl.bindVertexArray(this.vao_navmesh);
-    for (let i = 0; i < numPolygons; i++)
-        gl.drawArrays(gl.TRIANGLE_FAN, i * 4, 4);
-    gl.bindVertexArray(null);
-    gl.disable(gl.BLEND);
+    if (navmeshInitialized && showDebugOverlay) {
+        // NavMesh
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.uniform4fv(uniform_overlay_color, navmeshColor);
+        gl.bindVertexArray(this.vao_navmesh);
+        for (let i = 0; i < numPolygons; i++)
+            gl.drawArrays(gl.TRIANGLE_FAN, i * 4, 4);
+        gl.bindVertexArray(null);
+        gl.disable(gl.BLEND);
 
-    // GraphPoints
-    gl.uniform4fv(uniform_overlay_color, graphPointColor);
-    gl.bindVertexArray(vao_graphPoints);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphPoints);
-    for (let i = 0; i < numGraphPoints; i++)
-        gl.drawArrays(gl.POINTS, i, 1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindVertexArray(null);
-    
-    // Edges
-    gl.uniform4fv(uniform_overlay_color, graphEdgeColor);
-    gl.bindVertexArray(vao_graphEdges);
-    gl.lineWidth(10.0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphEdges);
-    for (let i = 0; i < numEdges; i++)
-         gl.drawArrays(gl.LINES, i * 2, 2);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindVertexArray(null);
+        // GraphPoints
+        gl.uniform4fv(uniform_overlay_color, graphPointColor);
+        gl.bindVertexArray(vao_graphPoints);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphPoints);
+        for (let i = 0; i < numGraphPoints; i++)
+            gl.drawArrays(gl.POINTS, i, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindVertexArray(null);
+        
+        // Edges
+        gl.uniform4fv(uniform_overlay_color, graphEdgeColor);
+        gl.bindVertexArray(vao_graphEdges);
+        gl.lineWidth(10.0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo_graphEdges);
+        for (let i = 0; i < numEdges; i++)
+            gl.drawArrays(gl.LINES, i * 2, 2);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindVertexArray(null);
 
-    // Path Edges
-    gl.uniform4fv(uniform_overlay_color, pathEdgeColor);
-    gl.bindVertexArray(vao_path);
-    gl.lineWidth(10.0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo_path);
-    for (let i = 0; i < numVerticesInPath; i++)
-         gl.drawArrays(gl.LINES, i, 2);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindVertexArray(null);
+            if (pathGenerated) {
+            // Path Edges
+            gl.uniform4fv(uniform_overlay_color, pathEdgeColor);
+            gl.bindVertexArray(vao_path);
+            gl.lineWidth(10.0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, vbo_path);
+            for (let i = 0; i < numVerticesInPath; i++)
+                gl.drawArrays(gl.LINES, i, 2);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            gl.bindVertexArray(null);
+        }
+    }
 
     gl.useProgram(null);
 
@@ -823,4 +832,46 @@ function draw() {
     gl.useProgram(null);
 
     requestAnimationFrame(draw, canvas);
+}
+
+function SetupPhase() {
+    if (navMeshObj)
+        delete navMeshObj;
+
+    document.getElementById('pathbutton').disabled = true;
+    document.getElementById('debugbutton').disabled = true;
+
+    allowCubeMovement = true;
+    allowAgentMovement = true;
+    allowFinalPointMovement = true;
+    navmeshInitialized = false;
+    showDebugOverlay = false;
+    pathGenerated = false;
+}
+
+function GenerateNavMesh() {
+    allowCubeMovement = false;
+
+    navMeshObj = new NavMeshManager(scene, 0.25);
+
+    generateNavMeshResources();
+
+    navmeshInitialized = true;
+
+    document.getElementById('pathbutton').disabled = false;
+    document.getElementById('debugbutton').disabled = false;
+}
+
+function GenerateNavPath() {
+    if (navmeshInitialized) {
+        allowAgentMovement = true;
+        allowFinalPointMovement = true;
+
+        GeneratePath();
+        pathGenerated = true;
+    }
+}
+
+function ShowDebugOverlay() {
+    showDebugOverlay = !showDebugOverlay;
 }

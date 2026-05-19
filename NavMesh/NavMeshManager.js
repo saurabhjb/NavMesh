@@ -22,13 +22,6 @@ class Edge {
     }
 };
 
-class GraphNode {
-    constructor() {
-        this.graphPointIndex = -1;
-        this.connectedEdges = new Map();
-    }
-};
-
 class NavMeshManager {
     GenerateWalkableGrid(scene) {
         this.walkableGrid = Array(this.numCellsHeight).fill(null).map(() => Array(this.numCellsWidth).fill(true));
@@ -478,8 +471,8 @@ class NavMeshManager {
 
     EdgeIsConnected(startEdge, endEdge) {
         for (let edge of this.edges) {
-            if ((edge.p0 === startEdge && edge.p1 === endEdge) ||
-                (edge.p0 === endEdge && edge.p1 === startEdge)) {
+            if ((edge.p0 == startEdge && edge.p1 == endEdge) ||
+                (edge.p0 == endEdge && edge.p1 == startEdge)) {
                 return true;
             }
         }
@@ -489,9 +482,9 @@ class NavMeshManager {
     GetNeighbors(nodeIndex) {
         let neighbors = [];
         for (let edge of this.edges) {
-            if (edge.p0 === nodeIndex) {
+            if (edge.p0 == nodeIndex) {
                 neighbors.push(edge.p1);
-            } else if (edge.p1 === nodeIndex) {
+            } else if (edge.p1 == nodeIndex) {
                 neighbors.push(edge.p0);
             }
         }
@@ -510,6 +503,10 @@ class NavMeshManager {
 
         if (polygonStart == -1 || polygonEnd == -1) {
             return [];
+        }
+
+        if (polygonStart == polygonEnd) {
+            return [[startX, startZ], [endX, endZ]];
         }
 
         let startNode = this.FindNearestPoint(startX, startZ);
@@ -542,7 +539,7 @@ class NavMeshManager {
                 }
             }
 
-            if (current === endNode) {
+            if (current == endNode) {
                 // Reconstruct path
                 let path = [this.graphPoints[current]];
                 while (cameFrom[current] !== undefined) {
@@ -574,55 +571,66 @@ class NavMeshManager {
     }
 
     GetEdgeFromPoints(p0, p1) {
+        for (let edge of this.edges) {
+            let g0  =this.graphPoints[p0];
+            let g1 = this.graphPoints[p1];
+            console.log(edge, g0, g1);
 
+            if (edge.p0[0] == g0[0] && edge.p0[1] == edge.g0[1] && edge.p1[0] == g1[0] && edge.p1[1] == edge.g1[1])
+                return (edge);
+            if (edge.p1[0] == g0[0] && edge.p1[1] == edge.g0[1] && edge.p0[0] == g1[0] && edge.p0[1] == edge.g1[1])
+                return (edge);
+        }
+    }
+
+    EdgeCanAccessPortal(edge, polygon) {
+        console.log(edge);
+        for (let polyID of edge.portalIndices) {
+            if (polyID == polygon)
+                return (true);
+        }
+        return (false);
     }
 
     FindShortestPath(startPos, endPos) {
-        let graphPath = this.FindPath(startPos, endPos);
         let startX = Math.floor((startPos[0] + this.groundWidth / 2.0) / this.cellSize);
         let startZ = Math.floor((startPos[2] + this.groundHeight / 2.0) / this.cellSize);
         let endX = Math.floor((endPos[0] + this.groundWidth / 2.0) / this.cellSize);
         let endZ = Math.floor((endPos[2] + this.groundHeight / 2.0) / this.cellSize);
-
+        
         let path = [];
+        
+        let polygonStart = this.FindPolygonID(startX, startZ);
+        let polygonEnd = this.FindPolygonID(endX, endZ);
+        
+        if (polygonStart == polygonEnd) {
+            let finalPath = [];
+            finalPath.push([startPos[0], -0.486, startPos[2]]);
+            finalPath.push([endPos[0], -0.486, endPos[2]]);
+            return (finalPath);
+        } else {
+            let finalPath = [];
+            let graphPath = this.FindPath(startPos, endPos);
 
-        if (graphPath.length > 0) {
-            path.push([startX, startZ]);
-            for (let p of graphPath) {
-                path.push(p);
+            if (graphPath.length > 0) {
+                for (let p of graphPath) {
+                    path.push(p);
+                }
             }
-            path.push([endX, endZ]);
-
-            // let polygonStart = this.FindPolygonID(startX, startZ);
-            // let polygonEnd = this.FindPolygonID(endX, endZ);
             
-            // // Simplify path
-            // let totalEdges = path.length;
-
-            // for (let i = 0; i < totalEdges; i++) {
-            //     if (i == 0) {
-
-            //     } else if (j == totalEdges - 1) {
-
-            //     } else {
-
-            //     }
-            // }
-
-            // console.log(path.length - 1);
-        }
-
-        let finalPath = [];
-        if (path.length > 0) {
-            // finalPath = [[startPos[0], -0.486, startPos[2]]];
-            for (let gridPoint of path) {
-                let worldX = gridPoint[0] * this.cellSize - this.groundWidth / 2.0;
-                let worldZ = gridPoint[1] * this.cellSize - this.groundHeight / 2.0;
-                finalPath.push([worldX, -0.496, worldZ]);
+            if (path.length > 0) {
+                finalPath = [[startPos[0], -0.486, startPos[2]]];
+                for (let gridPoint of path) {
+                    let worldX = gridPoint[0] * this.cellSize - this.groundWidth / 2.0;
+                    let worldZ = gridPoint[1] * this.cellSize - this.groundHeight / 2.0;
+                    finalPath.push([worldX, -0.496, worldZ]);
+                }
+                finalPath.push([endPos[0], -0.486, endPos[2]]);
             }
-            // finalPath.push([endPos[0], -0.486, endPos[2]]);
+            return finalPath;
         }
-        return finalPath;
+
+        return [];
     }
 
     // For rendering purpose
@@ -662,9 +670,5 @@ class NavMeshManager {
             points: new Float32Array(points),
             edges: new Float32Array(edges)
         });
-    }
-
-    GetShortestPath() {
-
     }
 }
