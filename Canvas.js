@@ -861,6 +861,7 @@ function GenerateNavMesh() {
     generateNavMeshResources();
 
     navmeshInitialized = true;
+    showDebugOverlay = true;
 
     document.getElementById('pathbutton').disabled = false;
     document.getElementById('debugbutton').disabled = false;
