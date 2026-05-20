@@ -87,4 +87,3 @@ Strategy for NavMesh Reconstruction
 7. Then run a pass to check which rectangles can be merged with one another \
    Run this again and again until there is no merge operation in the loop.
 8. Then again run Portal creation and Edge Identification functions.
-            
