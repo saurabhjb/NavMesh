@@ -3,7 +3,7 @@ This code is created using Raw WebGL APIs.
 Approach used for Nav Mesh Generation
 
 1. Convert the ground into grid based system based on bounds.
-2. Mark the areas with cubes. (Created walkable map, which stores 'true' for denoting walkable cell and 'false' for occupied.
+2. Mark the areas with cubes. (Created walkable map, which stores 'true' for denoting walkable cell and 'false' for occupied)
 3. Used Walkable grid to generate rectangles
    1. Start with (0, 0) position on grid.
    2. Scan horizontally until you reach the end (width of grid) or find occupied cell. This gives you min max for horizontal axis.
